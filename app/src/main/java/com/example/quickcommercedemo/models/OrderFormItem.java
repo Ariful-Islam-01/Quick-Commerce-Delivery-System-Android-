@@ -4,6 +4,7 @@ public class OrderFormItem {
     private String category;
     private String productName;
     private String description;
+    private String notes; // Added
     private String location;
     private double latitude;
     private double longitude;
@@ -29,6 +30,9 @@ public class OrderFormItem {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
 
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }

@@ -52,9 +52,21 @@
             android:exported="false" />
 
         <activity
+            android:name=".activities.AdminUserListActivity"
+            android:exported="false"
+            android:label="Manage Users"
+            android:parentActivityName=".activities.AdminMainActivity" />
+
+        <activity
             android:name=".activities.OrderDetailsActivity"
             android:exported="false"
             android:label="Order Details"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".activities.EditProfileActivity"
+            android:exported="false"
+            android:label="Edit Profile"
             android:parentActivityName=".MainActivity" />
 
     </application>

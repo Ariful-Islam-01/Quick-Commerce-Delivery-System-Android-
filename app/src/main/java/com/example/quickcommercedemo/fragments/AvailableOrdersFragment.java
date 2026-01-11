@@ -2,9 +2,12 @@ package com.example.quickcommercedemo.fragments;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -21,19 +24,24 @@ import com.example.quickcommercedemo.adapters.OrderCardAdapter;
 import com.example.quickcommercedemo.models.Order;
 import com.example.quickcommercedemo.repositories.OrderRepository;
 import com.example.quickcommercedemo.utils.SessionManager;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class AvailableOrdersFragment extends Fragment {
 
     private RecyclerView rvAvailableOrders;
     private ProgressBar progressBar;
     private TextView tvEmpty;
+    private EditText etSearch;
 
     private OrderRepository orderRepository;
     private SessionManager sessionManager;
     private OrderCardAdapter adapter;
+    private List<Order> allAvailableOrders = new ArrayList<>();
+    private ValueEventListener availableListener;
 
     @Nullable
     @Override
@@ -46,9 +54,11 @@ public class AvailableOrdersFragment extends Fragment {
         rvAvailableOrders = view.findViewById(R.id.rvAvailableOrders);
         progressBar = view.findViewById(R.id.progressBar);
         tvEmpty = view.findViewById(R.id.tvEmpty);
+        etSearch = view.findViewById(R.id.etSearchAvailable);
 
         setupRecyclerView();
-        loadAvailableOrders();
+        setupSearch();
+        startListeningForAvailableOrders();
 
         return view;
     }
@@ -65,7 +75,6 @@ public class AvailableOrdersFragment extends Fragment {
 
             @Override
             public void onEditClick(Order order) {}
-
             @Override
             public void onCancelClick(Order order) {}
 
@@ -77,34 +86,51 @@ public class AvailableOrdersFragment extends Fragment {
         rvAvailableOrders.setAdapter(adapter);
     }
 
-    private void loadAvailableOrders() {
+    private void setupSearch() {
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { filter(s.toString()); }
+            @Override public void afterTextChanged(Editable s) {}
+        });
+    }
+
+    private void startListeningForAvailableOrders() {
         progressBar.setVisibility(View.VISIBLE);
         String currentUserId = sessionManager.getUserId();
 
-        orderRepository.getPendingOrders(new OrderRepository.OrdersCallback() {
+        availableListener = orderRepository.listenToPendingOrders(new OrderRepository.OrdersCallback() {
             @Override
             public void onSuccess(List<Order> orders) {
                 if (!isAdded()) return;
                 progressBar.setVisibility(View.GONE);
                 
-                List<Order> otherUsersOrders = new ArrayList<>();
-                for (Order o : orders) {
-                    if (!o.getCustomerId().equals(currentUserId)) {
-                        otherUsersOrders.add(o);
-                    }
-                }
+                // Filter: Only show pending orders from OTHER users
+                allAvailableOrders = orders.stream()
+                        .filter(o -> !o.getCustomerId().equals(currentUserId))
+                        .collect(Collectors.toList());
                 
-                adapter.updateList(otherUsersOrders);
-                tvEmpty.setVisibility(otherUsersOrders.isEmpty() ? View.VISIBLE : View.GONE);
+                filter(etSearch.getText().toString());
             }
 
             @Override
             public void onFailure(Exception e) {
-                if (!isAdded()) return;
-                progressBar.setVisibility(View.GONE);
-                Toast.makeText(requireContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                if (isAdded()) progressBar.setVisibility(View.GONE);
             }
         });
+    }
+
+    private void filter(String query) {
+        List<Order> filtered;
+        if (query.isEmpty()) {
+            filtered = new ArrayList<>(allAvailableOrders);
+        } else {
+            String q = query.toLowerCase();
+            filtered = allAvailableOrders.stream()
+                    .filter(o -> o.getProductName().toLowerCase().contains(q) || o.getLocation().toLowerCase().contains(q))
+                    .collect(Collectors.toList());
+        }
+        adapter.updateList(filtered);
+        tvEmpty.setVisibility(filtered.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
     private void acceptOrder(Order order) {
@@ -114,16 +140,18 @@ public class AvailableOrdersFragment extends Fragment {
         orderRepository.acceptOrder(order.getOrderId(), userId, userName, new OrderRepository.VoidCallback() {
             @Override
             public void onSuccess() {
-                if (!isAdded()) return;
-                Toast.makeText(requireContext(), "Order accepted!", Toast.LENGTH_SHORT).show();
-                loadAvailableOrders();
+                if (isAdded()) Toast.makeText(requireContext(), "Delivery accepted!", Toast.LENGTH_SHORT).show();
             }
-
             @Override
             public void onFailure(Exception e) {
-                if (!isAdded()) return;
-                Toast.makeText(requireContext(), "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                if (isAdded()) Toast.makeText(requireContext(), "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (availableListener != null) orderRepository.removeListener(availableListener);
     }
 }

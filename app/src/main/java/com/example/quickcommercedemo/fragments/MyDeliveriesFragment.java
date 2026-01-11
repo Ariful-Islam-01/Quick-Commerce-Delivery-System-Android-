@@ -22,6 +22,7 @@ import com.example.quickcommercedemo.models.Order;
 import com.example.quickcommercedemo.repositories.OrderRepository;
 import com.example.quickcommercedemo.utils.SessionManager;
 import com.google.android.material.tabs.TabLayout;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +39,7 @@ public class MyDeliveriesFragment extends Fragment {
     private SessionManager sessionManager;
     private List<Order> allDeliveries = new ArrayList<>();
     private OrderCardAdapter adapter;
+    private ValueEventListener deliveryListener;
 
     @Nullable
     @Override
@@ -54,29 +56,32 @@ public class MyDeliveriesFragment extends Fragment {
 
         setupRecyclerView();
         setupTabs();
-        loadDeliveries();
+        startListeningForDeliveries();
 
         return view;
     }
 
     private void setupRecyclerView() {
         rvDeliveries.setLayoutManager(new LinearLayoutManager(requireContext()));
-        adapter = new OrderCardAdapter(new ArrayList<>(), new OrderCardAdapter.OnOrderClickListener() {
+        // Updated to use the 4-argument constructor with isMyTask = true
+        adapter = new OrderCardAdapter(new ArrayList<>(), false, true, new OrderCardAdapter.OnOrderClickListener() {
             @Override
             public void onOrderClick(Order order) {
                 Intent intent = new Intent(requireContext(), OrderDetailsActivity.class);
                 intent.putExtra("orderId", order.getOrderId());
                 startActivity(intent);
             }
-
-            @Override
-            public void onEditClick(Order order) {}
-
-            @Override
-            public void onCancelClick(Order order) {}
-
-            @Override
-            public void onMainActionClick(Order order) {}
+            @Override public void onEditClick(Order order) {}
+            @Override public void onCancelClick(Order order) {}
+            
+            @Override 
+            public void onMainActionClick(Order order) {
+                // When "Update Status" is clicked, we just open details 
+                // where the workflow buttons are already implemented.
+                Intent intent = new Intent(requireContext(), OrderDetailsActivity.class);
+                intent.putExtra("orderId", order.getOrderId());
+                startActivity(intent);
+            }
         });
         rvDeliveries.setAdapter(adapter);
     }
@@ -84,38 +89,28 @@ public class MyDeliveriesFragment extends Fragment {
     private void setupTabs() {
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
-            public void onTabSelected(TabLayout.Tab tab) {
-                filterDeliveries(tab.getPosition());
-            }
-            @Override
-            public void onTabUnselected(TabLayout.Tab tab) {}
-            @Override
-            public void onTabReselected(TabLayout.Tab tab) {}
+            public void onTabSelected(TabLayout.Tab tab) { filterDeliveries(tab.getPosition()); }
+            @Override public void onTabUnselected(TabLayout.Tab tab) {}
+            @Override public void onTabReselected(TabLayout.Tab tab) {}
         });
     }
 
-    private void loadDeliveries() {
+    private void startListeningForDeliveries() {
         progressBar.setVisibility(View.VISIBLE);
         String userId = sessionManager.getUserId();
 
-        orderRepository.getAllOrders(new OrderRepository.OrdersCallback() {
+        deliveryListener = orderRepository.listenToAcceptedDeliveries(userId, new OrderRepository.OrdersCallback() {
             @Override
             public void onSuccess(List<Order> orders) {
                 if (!isAdded()) return;
                 progressBar.setVisibility(View.GONE);
-                
-                allDeliveries = orders.stream()
-                        .filter(o -> userId.equals(o.getAcceptedByUserId()))
-                        .collect(Collectors.toList());
-                
+                allDeliveries = orders;
                 filterDeliveries(tabLayout.getSelectedTabPosition());
             }
 
             @Override
             public void onFailure(Exception e) {
-                if (!isAdded()) return;
-                progressBar.setVisibility(View.GONE);
-                Toast.makeText(requireContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                if (isAdded()) progressBar.setVisibility(View.GONE);
             }
         });
     }
@@ -140,5 +135,11 @@ public class MyDeliveriesFragment extends Fragment {
 
         adapter.updateList(filteredList);
         tvEmpty.setVisibility(filteredList.isEmpty() ? View.VISIBLE : View.GONE);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (deliveryListener != null) orderRepository.removeListener(deliveryListener);
     }
 }

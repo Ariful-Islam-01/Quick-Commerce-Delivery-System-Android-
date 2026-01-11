@@ -54,9 +54,9 @@ public class MultiOrderFormAdapter extends RecyclerView.Adapter<MultiOrderFormAd
         TextView tvOrderNumber;
         ImageButton btnRemove;
         AutoCompleteTextView spinnerCategory;
-        EditText etProductName, etDescription, etLocation, etDeliveryDate, etTimeFrom, etTimeTo, etFee;
+        EditText etProductName, etDescription, etLocation, etDeliveryDate, etTimeFrom, etTimeTo, etFee, etNotes;
         
-        private CustomTextWatcher nameWatcher, descWatcher, locWatcher, feeWatcher;
+        private CustomTextWatcher nameWatcher, descWatcher, locWatcher, feeWatcher, notesWatcher;
 
         public FormViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -70,6 +70,7 @@ public class MultiOrderFormAdapter extends RecyclerView.Adapter<MultiOrderFormAd
             etTimeFrom = itemView.findViewById(R.id.etTimeFrom);
             etTimeTo = itemView.findViewById(R.id.etTimeTo);
             etFee = itemView.findViewById(R.id.etFee);
+            etNotes = itemView.findViewById(R.id.etNotes);
 
             setupCategorySpinner();
             setupDateTimePickers();
@@ -130,6 +131,7 @@ public class MultiOrderFormAdapter extends RecyclerView.Adapter<MultiOrderFormAd
             nameWatcher = new CustomTextWatcher(s -> items.get(getAdapterPosition()).setProductName(s));
             descWatcher = new CustomTextWatcher(s -> items.get(getAdapterPosition()).setDescription(s));
             locWatcher = new CustomTextWatcher(s -> items.get(getAdapterPosition()).setLocation(s));
+            notesWatcher = new CustomTextWatcher(s -> items.get(getAdapterPosition()).setNotes(s));
             feeWatcher = new CustomTextWatcher(s -> {
                 try {
                     items.get(getAdapterPosition()).setDeliveryFee(Double.parseDouble(s));
@@ -141,6 +143,7 @@ public class MultiOrderFormAdapter extends RecyclerView.Adapter<MultiOrderFormAd
             etProductName.addTextChangedListener(nameWatcher);
             etDescription.addTextChangedListener(descWatcher);
             etLocation.addTextChangedListener(locWatcher);
+            etNotes.addTextChangedListener(notesWatcher);
             etFee.addTextChangedListener(feeWatcher);
         }
 
@@ -158,6 +161,7 @@ public class MultiOrderFormAdapter extends RecyclerView.Adapter<MultiOrderFormAd
             nameWatcher.setActive(false);
             descWatcher.setActive(false);
             locWatcher.setActive(false);
+            notesWatcher.setActive(false);
             feeWatcher.setActive(false);
 
             etProductName.setText(item.getProductName());
@@ -166,12 +170,14 @@ public class MultiOrderFormAdapter extends RecyclerView.Adapter<MultiOrderFormAd
             etDeliveryDate.setText(item.getDeliveryDate());
             etTimeFrom.setText(item.getTimeFrom());
             etTimeTo.setText(item.getTimeTo());
+            etNotes.setText(item.getNotes());
             etFee.setText(item.getDeliveryFee() > 0 ? String.valueOf(item.getDeliveryFee()) : "");
             spinnerCategory.setText(item.getCategory(), false);
 
             nameWatcher.setActive(true);
             descWatcher.setActive(true);
             locWatcher.setActive(true);
+            notesWatcher.setActive(true);
             feeWatcher.setActive(true);
         }
     }

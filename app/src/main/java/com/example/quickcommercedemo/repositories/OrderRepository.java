@@ -40,7 +40,6 @@ public class OrderRepository {
         void onFailure(Exception e);
     }
 
-    // Real-time listener for a user's orders
     public ValueEventListener listenToOrdersByCustomerId(String customerId, OrdersCallback callback) {
         ValueEventListener listener = new ValueEventListener() {
             @Override
@@ -48,35 +47,66 @@ public class OrderRepository {
                 List<Order> orders = new ArrayList<>();
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
                     Order order = childSnapshot.getValue(Order.class);
-                    if (order != null) {
+                    if (order != null) orders.add(order);
+                }
+                orders.sort((o1, o2) -> Long.compare(o2.getCreatedAt(), o1.getCreatedAt()));
+                callback.onSuccess(orders);
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) { callback.onFailure(error.toException()); }
+        };
+        ordersRef.orderByChild("customerId").equalTo(customerId).addValueEventListener(listener);
+        return listener;
+    }
+
+    public ValueEventListener listenToPendingOrders(OrdersCallback callback) {
+        ValueEventListener listener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<Order> orders = new ArrayList<>();
+                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                    Order order = childSnapshot.getValue(Order.class);
+                    if (order != null) orders.add(order);
+                }
+                orders.sort((o1, o2) -> Long.compare(o2.getCreatedAt(), o1.getCreatedAt()));
+                callback.onSuccess(orders);
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) { callback.onFailure(error.toException()); }
+        };
+        ordersRef.orderByChild("status").equalTo("Pending").addValueEventListener(listener);
+        return listener;
+    }
+
+    public ValueEventListener listenToAcceptedDeliveries(String userId, OrdersCallback callback) {
+        ValueEventListener listener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<Order> orders = new ArrayList<>();
+                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                    Order order = childSnapshot.getValue(Order.class);
+                    if (order != null && userId.equals(order.getAcceptedByUserId())) {
                         orders.add(order);
                     }
                 }
                 orders.sort((o1, o2) -> Long.compare(o2.getCreatedAt(), o1.getCreatedAt()));
                 callback.onSuccess(orders);
             }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                callback.onFailure(error.toException());
-            }
+            @Override public void onCancelled(@NonNull DatabaseError error) { callback.onFailure(error.toException()); }
         };
-        ordersRef.orderByChild("customerId").equalTo(customerId).addValueEventListener(listener);
+        ordersRef.addValueEventListener(listener);
         return listener;
     }
 
     public void removeListener(ValueEventListener listener) {
-        if (listener != null) {
-            ordersRef.removeEventListener(listener);
-        }
+        if (listener != null) ordersRef.removeEventListener(listener);
     }
 
     public void createOrder(Order order, StringCallback callback) {
-        String orderId = ordersRef.push().getKey();
+        String orderId = order.getOrderId();
+        if (orderId == null) orderId = ordersRef.push().getKey();
         if (orderId != null) {
             order.setOrderId(orderId);
             ordersRef.child(orderId).setValue(order)
-                .addOnSuccessListener(aVoid -> callback.onSuccess(orderId))
+                .addOnSuccessListener(aVoid -> callback.onSuccess(order.getOrderId()))
                 .addOnFailureListener(callback::onFailure);
         } else {
             callback.onFailure(new Exception("Failed to generate order ID"));
@@ -89,67 +119,44 @@ public class OrderRepository {
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
                     Order order = snapshot.getValue(Order.class);
-                    if (order != null) {
-                        callback.onSuccess(order);
-                    } else {
-                        callback.onFailure(new Exception("Failed to parse order"));
-                    }
-                } else {
-                    callback.onFailure(new Exception("Order not found"));
-                }
+                    if (order != null) callback.onSuccess(order);
+                    else callback.onFailure(new Exception("Failed to parse order"));
+                } else callback.onFailure(new Exception("Order not found"));
             }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                callback.onFailure(error.toException());
-            }
+            @Override public void onCancelled(@NonNull DatabaseError error) { callback.onFailure(error.toException()); }
         });
     }
 
     public void getOrdersByCustomerId(String customerId, OrdersCallback callback) {
-        ordersRef.orderByChild("customerId").equalTo(customerId)
-            .addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    List<Order> orders = new ArrayList<>();
-                    for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                        Order order = childSnapshot.getValue(Order.class);
-                        if (order != null) {
-                            orders.add(order);
-                        }
-                    }
-                    orders.sort((o1, o2) -> Long.compare(o2.getCreatedAt(), o1.getCreatedAt()));
-                    callback.onSuccess(orders);
+        ordersRef.orderByChild("customerId").equalTo(customerId).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<Order> orders = new ArrayList<>();
+                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                    Order order = childSnapshot.getValue(Order.class);
+                    if (order != null) orders.add(order);
                 }
-
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    callback.onFailure(error.toException());
-                }
-            });
+                orders.sort((o1, o2) -> Long.compare(o2.getCreatedAt(), o1.getCreatedAt()));
+                callback.onSuccess(orders);
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) { callback.onFailure(error.toException()); }
+        });
     }
 
     public void getPendingOrders(OrdersCallback callback) {
-        ordersRef.orderByChild("status").equalTo("Pending")
-            .addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    List<Order> orders = new ArrayList<>();
-                    for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                        Order order = childSnapshot.getValue(Order.class);
-                        if (order != null) {
-                            orders.add(order);
-                        }
-                    }
-                    orders.sort((o1, o2) -> Long.compare(o2.getCreatedAt(), o1.getCreatedAt()));
-                    callback.onSuccess(orders);
+        ordersRef.orderByChild("status").equalTo("Pending").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<Order> orders = new ArrayList<>();
+                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                    Order order = childSnapshot.getValue(Order.class);
+                    if (order != null) orders.add(order);
                 }
-
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    callback.onFailure(error.toException());
-                }
-            });
+                orders.sort((o1, o2) -> Long.compare(o2.getCreatedAt(), o1.getCreatedAt()));
+                callback.onSuccess(orders);
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) { callback.onFailure(error.toException()); }
+        });
     }
 
     public void acceptOrder(String orderId, String deliveryPersonId, String deliveryPersonName, VoidCallback callback) {
@@ -175,18 +182,12 @@ public class OrderRepository {
                 List<Order> orders = new ArrayList<>();
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
                     Order order = childSnapshot.getValue(Order.class);
-                    if (order != null) {
-                        orders.add(order);
-                    }
+                    if (order != null) orders.add(order);
                 }
                 orders.sort((o1, o2) -> Long.compare(o2.getCreatedAt(), o1.getCreatedAt()));
                 callback.onSuccess(orders);
             }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                callback.onFailure(error.toException());
-            }
+            @Override public void onCancelled(@NonNull DatabaseError error) { callback.onFailure(error.toException()); }
         });
     }
 
