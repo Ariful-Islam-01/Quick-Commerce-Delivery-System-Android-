@@ -1,11 +1,12 @@
 package com.example.quickcommercedemo.fragments;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -16,6 +17,8 @@ import androidx.fragment.app.Fragment;
 
 import com.example.quickcommercedemo.R;
 import com.example.quickcommercedemo.activities.LoginActivity;
+import com.example.quickcommercedemo.models.User;
+import com.example.quickcommercedemo.repositories.UserRepository;
 import com.example.quickcommercedemo.utils.SessionManager;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.switchmaterial.SwitchMaterial;
@@ -29,6 +32,8 @@ public class ProfileFragment extends Fragment {
     private View btnEditProfile, btnChangeAddress;
     
     private SessionManager sessionManager;
+    private UserRepository userRepository;
+    private User currentUser;
 
     @Nullable
     @Override
@@ -36,6 +41,7 @@ public class ProfileFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_profile, container, false);
 
         sessionManager = new SessionManager(requireContext());
+        userRepository = new UserRepository();
 
         tvProfileName = view.findViewById(R.id.tvProfileName);
         tvProfileEmail = view.findViewById(R.id.tvProfileEmail);
@@ -51,31 +57,132 @@ public class ProfileFragment extends Fragment {
     }
 
     private void loadUserData() {
-        tvProfileName.setText(sessionManager.getUserName());
-        tvProfileEmail.setText(sessionManager.getUserEmail());
+        String userId = sessionManager.getUserId();
+        userRepository.getUserById(userId, new UserRepository.UserCallback() {
+            @Override
+            public void onSuccess(User user) {
+                if (!isAdded()) return;
+                currentUser = user;
+                tvProfileName.setText(user.getName());
+                tvProfileEmail.setText(user.getEmail());
+                sessionManager.createLoginSession(user.getUserId(), user.getName(), user.getEmail(), user.isAdmin());
+                sessionManager.setUserAddress(user.getDefaultAddress());
+                sessionManager.setUserPhone(user.getPhone());
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                if (!isAdded()) return;
+                tvProfileName.setText(sessionManager.getUserName());
+                tvProfileEmail.setText(sessionManager.getUserEmail());
+            }
+        });
         
-        // Handle theme switch state
-        boolean isDarkMode = sessionManager.isDarkMode();
-        switchTheme.setChecked(isDarkMode);
+        switchTheme.setChecked(sessionManager.isDarkMode());
     }
 
     private void setupListeners() {
         switchTheme.setOnCheckedChangeListener((buttonView, isChecked) -> {
             sessionManager.setDarkMode(isChecked);
-            if (isChecked) {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-            } else {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-            }
+            AppCompatDelegate.setDefaultNightMode(isChecked ? 
+                    AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_NO);
         });
 
         btnLogout.setOnClickListener(v -> logout());
 
-        btnEditProfile.setOnClickListener(v -> 
-            Toast.makeText(requireContext(), "Edit Profile coming soon", Toast.LENGTH_SHORT).show());
+        btnEditProfile.setOnClickListener(v -> showEditProfileDialog());
+        btnChangeAddress.setOnClickListener(v -> showUpdateAddressDialog());
+    }
+
+    private void showEditProfileDialog() {
+        if (currentUser == null) return;
+
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_edit_profile, null);
+        EditText etName = dialogView.findViewById(R.id.etEditName);
+        EditText etPhone = dialogView.findViewById(R.id.etEditPhone);
+        
+        etName.setText(currentUser.getName());
+        etPhone.setText(currentUser.getPhone());
+
+        new AlertDialog.Builder(requireContext())
+                .setView(dialogView)
+                .setCancelable(true)
+                .create();
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setView(dialogView)
+                .show();
+
+        dialogView.findViewById(R.id.btnCancel).setOnClickListener(v -> dialog.dismiss());
+        dialogView.findViewById(R.id.btnSave).setOnClickListener(v -> {
+            String name = etName.getText().toString().trim();
+            String phone = etPhone.getText().toString().trim();
             
-        btnChangeAddress.setOnClickListener(v -> 
-            Toast.makeText(requireContext(), "Address Management coming soon", Toast.LENGTH_SHORT).show());
+            if (name.isEmpty()) {
+                etName.setError("Name is required");
+                return;
+            }
+
+            currentUser.setName(name);
+            currentUser.setPhone(phone);
+            
+            userRepository.updateUser(currentUser, new UserRepository.VoidCallback() {
+                @Override
+                public void onSuccess() {
+                    if (isAdded()) {
+                        loadUserData();
+                        dialog.dismiss();
+                        Toast.makeText(requireContext(), "Profile updated", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    if (isAdded()) Toast.makeText(requireContext(), "Update failed", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+    }
+
+    private void showUpdateAddressDialog() {
+        if (currentUser == null) return;
+
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_update_address, null);
+        EditText etAddress = dialogView.findViewById(R.id.etDialogAddress);
+        
+        etAddress.setText(currentUser.getDefaultAddress());
+
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setView(dialogView)
+                .show();
+
+        dialogView.findViewById(R.id.btnCancelAddress).setOnClickListener(v -> dialog.dismiss());
+        dialogView.findViewById(R.id.btnSaveAddress).setOnClickListener(v -> {
+            String address = etAddress.getText().toString().trim();
+            
+            if (address.isEmpty()) {
+                etAddress.setError("Address is required");
+                return;
+            }
+
+            currentUser.setDefaultAddress(address);
+            
+            userRepository.updateUser(currentUser, new UserRepository.VoidCallback() {
+                @Override
+                public void onSuccess() {
+                    if (isAdded()) {
+                        sessionManager.setUserAddress(address);
+                        dialog.dismiss();
+                        Toast.makeText(requireContext(), "Address updated", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    if (isAdded()) Toast.makeText(requireContext(), "Update failed", Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
     }
 
     private void logout() {

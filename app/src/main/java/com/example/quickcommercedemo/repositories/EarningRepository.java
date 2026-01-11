@@ -43,6 +43,36 @@ public class EarningRepository {
         }
     }
 
+    public ValueEventListener listenToEarningsByDeliveryPerson(String deliveryPersonId, EarningsCallback callback) {
+        ValueEventListener listener = new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<Earning> earnings = new ArrayList<>();
+                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                    Earning earning = childSnapshot.getValue(Earning.class);
+                    if (earning != null) {
+                        earnings.add(earning);
+                    }
+                }
+                earnings.sort((e1, e2) -> Long.compare(e2.getEarnedAt(), e1.getEarnedAt()));
+                callback.onSuccess(earnings);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                callback.onFailure(error.toException());
+            }
+        };
+        earningsRef.orderByChild("deliveryPersonId").equalTo(deliveryPersonId).addValueEventListener(listener);
+        return listener;
+    }
+
+    public void removeListener(ValueEventListener listener) {
+        if (listener != null) {
+            earningsRef.removeEventListener(listener);
+        }
+    }
+
     public void getEarningsByDeliveryPerson(String deliveryPersonId, EarningsCallback callback) {
         earningsRef.orderByChild("deliveryPersonId").equalTo(deliveryPersonId)
             .addListenerForSingleValueEvent(new ValueEventListener() {
@@ -66,4 +96,3 @@ public class EarningRepository {
             });
     }
 }
-

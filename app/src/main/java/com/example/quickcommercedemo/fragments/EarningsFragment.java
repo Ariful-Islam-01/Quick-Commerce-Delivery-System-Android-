@@ -15,9 +15,11 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.quickcommercedemo.R;
+import com.example.quickcommercedemo.adapters.EarningHistoryAdapter;
 import com.example.quickcommercedemo.models.Earning;
 import com.example.quickcommercedemo.repositories.EarningRepository;
 import com.example.quickcommercedemo.utils.SessionManager;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -31,6 +33,8 @@ public class EarningsFragment extends Fragment {
 
     private EarningRepository earningRepository;
     private SessionManager sessionManager;
+    private EarningHistoryAdapter adapter;
+    private ValueEventListener earningsListener;
 
     @Nullable
     @Override
@@ -47,18 +51,23 @@ public class EarningsFragment extends Fragment {
         rvEarnings = view.findViewById(R.id.rvEarnings);
         progressBar = view.findViewById(R.id.progressBar);
 
-        rvEarnings.setLayoutManager(new LinearLayoutManager(requireContext()));
-        
-        loadEarnings();
+        setupRecyclerView();
+        startListeningForEarnings();
 
         return view;
     }
 
-    private void loadEarnings() {
+    private void setupRecyclerView() {
+        rvEarnings.setLayoutManager(new LinearLayoutManager(requireContext()));
+        adapter = new EarningHistoryAdapter(new ArrayList<>());
+        rvEarnings.setAdapter(adapter);
+    }
+
+    private void startListeningForEarnings() {
         progressBar.setVisibility(View.VISIBLE);
         String userId = sessionManager.getUserId();
 
-        earningRepository.getEarningsByDeliveryPerson(userId, new EarningRepository.EarningsCallback() {
+        earningsListener = earningRepository.listenToEarningsByDeliveryPerson(userId, new EarningRepository.EarningsCallback() {
             @Override
             public void onSuccess(List<Earning> earnings) {
                 if (!isAdded()) return;
@@ -68,10 +77,10 @@ public class EarningsFragment extends Fragment {
                 
                 if (earnings.isEmpty()) {
                     tvEmptyEarnings.setVisibility(View.VISIBLE);
+                    adapter.updateList(new ArrayList<>());
                 } else {
                     tvEmptyEarnings.setVisibility(View.GONE);
-                    // Set adapter for earnings history if we have one
-                    // For now, let's just show stats as per requirement
+                    adapter.updateList(earnings);
                 }
             }
 
@@ -82,6 +91,14 @@ public class EarningsFragment extends Fragment {
                 Toast.makeText(requireContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (earningsListener != null) {
+            earningRepository.removeListener(earningsListener);
+        }
     }
 
     private void calculateAndDisplayStats(List<Earning> earnings) {
