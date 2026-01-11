@@ -38,10 +38,10 @@ public class EditProfileDialogFragment extends DialogFragment {
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         View view = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_edit_profile, null);
 
-        TextInputEditText etName = view.findViewById(R.id.etDialogName);
-        TextInputEditText etPhone = view.findViewById(R.id.etDialogPhone);
-        MaterialButton btnSave = view.findViewById(R.id.btnSaveEdit);
-        MaterialButton btnCancel = view.findViewById(R.id.btnCancelEdit);
+        TextInputEditText etName = view.findViewById(R.id.etEditName);
+        TextInputEditText etPhone = view.findViewById(R.id.etEditPhone);
+        MaterialButton btnSave = view.findViewById(R.id.btnSave);
+        MaterialButton btnCancel = view.findViewById(R.id.btnCancel);
 
         if (user != null) {
             etName.setText(user.getName());
