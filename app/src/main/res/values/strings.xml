@@ -1,0 +1,93 @@
+<resources>
+    <string name="app_name">Quick Commerce</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_create_order">Create Order</string>
+    <string name="nav_my_orders">My Orders</string>
+    <string name="nav_deliveries">Deliveries</string>
+    <string name="nav_earnings">Earnings</string>
+    <string name="nav_notifications">Notifications</string>
+    <string name="nav_profile">Profile</string>
+
+    <!-- Authentication -->
+    <string name="login">Login</string>
+    <string name="register">Register</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="name">Name</string>
+    <string name="phone">Phone Number</string>
+    <string name="address">Address</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="dont_have_account">Don\'t have an account? Register</string>
+    <string name="already_have_account">Already have an account? Login</string>
+
+    <!-- Order -->
+    <string name="category">Category</string>
+    <string name="product_name">Product Name</string>
+    <string name="description">Description</string>
+    <string name="location">Location</string>
+    <string name="delivery_time">Delivery Time</string>
+    <string name="delivery_fee">Delivery Fee (BDT)</string>
+    <string name="upload_photo">Upload Photo</string>
+    <string name="add_order">Add Order</string>
+    <string name="submit_orders">Submit Orders</string>
+
+    <!-- Categories -->
+    <string-array name="categories">
+        <item>Groceries</item>
+        <item>Electronics</item>
+        <item>Pharma</item>
+        <item>Food</item>
+        <item>Fashion</item>
+        <item>Others</item>
+    </string-array>
+
+    <!-- Order Status -->
+    <string name="status_pending">Pending</string>
+    <string name="status_accepted">Accepted</string>
+    <string name="status_picked_up">Picked Up</string>
+    <string name="status_delivered">Delivered</string>
+    <string name="status_cancelled">Cancelled</string>
+
+    <!-- Actions -->
+    <string name="accept">Accept</string>
+    <string name="cancel">Cancel</string>
+    <string name="view_details">View Details</string>
+    <string name="mark_delivered">Mark as Delivered</string>
+    <string name="rate_delivery">Rate Delivery</string>
+
+    <!-- Common -->
+    <string name="loading">Loading...</string>
+    <string name="no_data">No data available</string>
+    <string name="error_occurred">An error occurred</string>
+    <string name="success">Success</string>
+    <string name="search">Search</string>
+    <string name="filter">Filter</string>
+    <string name="save">Save</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+    <string name="logout">Logout</string>
+
+    <!-- Earnings -->
+    <string name="total_earnings">Total Earnings</string>
+    <string name="today_earnings">Today\'s Earnings</string>
+    <string name="weekly_earnings">Weekly Earnings</string>
+    <string name="monthly_earnings">Monthly Earnings</string>
+
+    <!-- Profile -->
+    <string name="edit_profile">Edit Profile</string>
+    <string name="change_password">Change Password</string>
+    <string name="settings">Settings</string>
+
+    <!-- Admin -->
+    <string name="manage_users">Manage Users</string>
+    <string name="manage_orders">Manage Orders</string>
+    <string name="manage_earnings">Manage Earnings</string>
+    <string name="dashboard">Dashboard</string>
+
+    <!-- Notifications -->
+    <string name="mark_all_read">Mark All as Read</string>
+    <string name="no_notifications">No notifications</string>
+</resources>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "61575355008",
+    "project_id": "quickcommercedemo",
+    "storage_bucket": "quickcommercedemo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:61575355008:android:f4ca5f87578a22de756465",
+        "android_client_info": {
+          "package_name": "com.example.quickcommercedemo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDxMjvQPb9lTQqsm5AE0ZKAfn7KtvzHyXE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
