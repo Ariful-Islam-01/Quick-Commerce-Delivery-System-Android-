@@ -1,5 +1,6 @@
 package com.example.quickcommercedemo.adapters;
 
+import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -8,9 +9,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -52,8 +53,8 @@ public class MultiOrderFormAdapter extends RecyclerView.Adapter<MultiOrderFormAd
     class FormViewHolder extends RecyclerView.ViewHolder {
         TextView tvOrderNumber;
         ImageButton btnRemove;
-        Spinner spinnerCategory;
-        EditText etProductName, etDescription, etLocation, etTimeFrom, etTimeTo, etFee;
+        AutoCompleteTextView spinnerCategory;
+        EditText etProductName, etDescription, etLocation, etDeliveryDate, etTimeFrom, etTimeTo, etFee;
         
         private CustomTextWatcher nameWatcher, descWatcher, locWatcher, feeWatcher;
 
@@ -65,53 +66,47 @@ public class MultiOrderFormAdapter extends RecyclerView.Adapter<MultiOrderFormAd
             etProductName = itemView.findViewById(R.id.etProductName);
             etDescription = itemView.findViewById(R.id.etDescription);
             etLocation = itemView.findViewById(R.id.etLocation);
+            etDeliveryDate = itemView.findViewById(R.id.etDeliveryDate);
             etTimeFrom = itemView.findViewById(R.id.etTimeFrom);
             etTimeTo = itemView.findViewById(R.id.etTimeTo);
             etFee = itemView.findViewById(R.id.etFee);
 
             setupCategorySpinner();
-            setupTimePickers();
-            
-            // Initialize watchers
-            nameWatcher = new CustomTextWatcher(s -> items.get(getAdapterPosition()).setProductName(s));
-            descWatcher = new CustomTextWatcher(s -> items.get(getAdapterPosition()).setDescription(s));
-            locWatcher = new CustomTextWatcher(s -> items.get(getAdapterPosition()).setLocation(s));
-            feeWatcher = new CustomTextWatcher(s -> {
-                try {
-                    items.get(getAdapterPosition()).setDeliveryFee(Double.parseDouble(s));
-                } catch (Exception e) {
-                    items.get(getAdapterPosition()).setDeliveryFee(0.0);
-                }
-            });
-
-            etProductName.addTextChangedListener(nameWatcher);
-            etDescription.addTextChangedListener(descWatcher);
-            etLocation.addTextChangedListener(locWatcher);
-            etFee.addTextChangedListener(feeWatcher);
+            setupDateTimePickers();
+            setupTextWatchers();
         }
 
         private void setupCategorySpinner() {
             ArrayAdapter<String> adapter = new ArrayAdapter<>(itemView.getContext(),
-                    android.R.layout.simple_spinner_item, categories);
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                    android.R.layout.simple_dropdown_item_1line, categories);
             spinnerCategory.setAdapter(adapter);
 
-            spinnerCategory.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-                @Override
-                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                    int pos = getAdapterPosition();
-                    if (pos != RecyclerView.NO_POSITION) {
-                        items.get(pos).setCategory(categories[position]);
-                    }
+            spinnerCategory.setOnItemClickListener((parent, view, position, id) -> {
+                int pos = getAdapterPosition();
+                if (pos != RecyclerView.NO_POSITION) {
+                    items.get(pos).setCategory(categories[position]);
                 }
-                @Override
-                public void onNothingSelected(AdapterView<?> parent) {}
             });
         }
 
-        private void setupTimePickers() {
+        private void setupDateTimePickers() {
+            etDeliveryDate.setOnClickListener(v -> showDatePicker());
             etTimeFrom.setOnClickListener(v -> showTimePicker(etTimeFrom, true));
             etTimeTo.setOnClickListener(v -> showTimePicker(etTimeTo, false));
+        }
+
+        private void showDatePicker() {
+            Calendar calendar = Calendar.getInstance();
+            DatePickerDialog datePickerDialog = new DatePickerDialog(itemView.getContext(),
+                    (view, year, month, dayOfMonth) -> {
+                        String date = String.format(Locale.getDefault(), "%02d/%02d/%d", dayOfMonth, month + 1, year);
+                        etDeliveryDate.setText(date);
+                        int pos = getAdapterPosition();
+                        if (pos != RecyclerView.NO_POSITION) {
+                            items.get(pos).setDeliveryDate(date);
+                        }
+                    }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH));
+            datePickerDialog.show();
         }
 
         private void showTimePicker(EditText editText, boolean isFrom) {
@@ -131,6 +126,24 @@ public class MultiOrderFormAdapter extends RecyclerView.Adapter<MultiOrderFormAd
             timePickerDialog.show();
         }
 
+        private void setupTextWatchers() {
+            nameWatcher = new CustomTextWatcher(s -> items.get(getAdapterPosition()).setProductName(s));
+            descWatcher = new CustomTextWatcher(s -> items.get(getAdapterPosition()).setDescription(s));
+            locWatcher = new CustomTextWatcher(s -> items.get(getAdapterPosition()).setLocation(s));
+            feeWatcher = new CustomTextWatcher(s -> {
+                try {
+                    items.get(getAdapterPosition()).setDeliveryFee(Double.parseDouble(s));
+                } catch (Exception e) {
+                    items.get(getAdapterPosition()).setDeliveryFee(0.0);
+                }
+            });
+
+            etProductName.addTextChangedListener(nameWatcher);
+            etDescription.addTextChangedListener(descWatcher);
+            etLocation.addTextChangedListener(locWatcher);
+            etFee.addTextChangedListener(feeWatcher);
+        }
+
         public void bind(OrderFormItem item, int position) {
             tvOrderNumber.setText("Order #" + (position + 1));
             btnRemove.setVisibility(items.size() > 1 ? View.VISIBLE : View.GONE);
@@ -142,7 +155,6 @@ public class MultiOrderFormAdapter extends RecyclerView.Adapter<MultiOrderFormAd
                 }
             });
 
-            // Temporarily disable watchers to prevent recycling issues
             nameWatcher.setActive(false);
             descWatcher.setActive(false);
             locWatcher.setActive(false);
@@ -151,16 +163,11 @@ public class MultiOrderFormAdapter extends RecyclerView.Adapter<MultiOrderFormAd
             etProductName.setText(item.getProductName());
             etDescription.setText(item.getDescription());
             etLocation.setText(item.getLocation());
+            etDeliveryDate.setText(item.getDeliveryDate());
             etTimeFrom.setText(item.getTimeFrom());
             etTimeTo.setText(item.getTimeTo());
             etFee.setText(item.getDeliveryFee() > 0 ? String.valueOf(item.getDeliveryFee()) : "");
-            
-            for (int i = 0; i < categories.length; i++) {
-                if (categories[i].equals(item.getCategory())) {
-                    spinnerCategory.setSelection(i);
-                    break;
-                }
-            }
+            spinnerCategory.setText(item.getCategory(), false);
 
             nameWatcher.setActive(true);
             descWatcher.setActive(true);

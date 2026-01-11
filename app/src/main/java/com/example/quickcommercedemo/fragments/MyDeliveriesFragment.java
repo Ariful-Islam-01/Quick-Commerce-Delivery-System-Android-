@@ -1,5 +1,6 @@
 package com.example.quickcommercedemo.fragments;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.quickcommercedemo.R;
+import com.example.quickcommercedemo.activities.OrderDetailsActivity;
 import com.example.quickcommercedemo.adapters.OrderCardAdapter;
 import com.example.quickcommercedemo.models.Order;
 import com.example.quickcommercedemo.repositories.OrderRepository;
@@ -62,14 +64,19 @@ public class MyDeliveriesFragment extends Fragment {
         adapter = new OrderCardAdapter(new ArrayList<>(), new OrderCardAdapter.OnOrderClickListener() {
             @Override
             public void onOrderClick(Order order) {
-                // Show delivery details/workflow
-                Toast.makeText(requireContext(), "Delivery: " + order.getProductName(), Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(requireContext(), OrderDetailsActivity.class);
+                intent.putExtra("orderId", order.getOrderId());
+                startActivity(intent);
             }
 
             @Override
-            public void onActionClick(Order order) {
-                // Handle status updates here or in a details page
-            }
+            public void onEditClick(Order order) {}
+
+            @Override
+            public void onCancelClick(Order order) {}
+
+            @Override
+            public void onMainActionClick(Order order) {}
         });
         rvDeliveries.setAdapter(adapter);
     }
@@ -80,10 +87,8 @@ public class MyDeliveriesFragment extends Fragment {
             public void onTabSelected(TabLayout.Tab tab) {
                 filterDeliveries(tab.getPosition());
             }
-
             @Override
             public void onTabUnselected(TabLayout.Tab tab) {}
-
             @Override
             public void onTabReselected(TabLayout.Tab tab) {}
         });
@@ -93,14 +98,12 @@ public class MyDeliveriesFragment extends Fragment {
         progressBar.setVisibility(View.VISIBLE);
         String userId = sessionManager.getUserId();
 
-        // Note: Using orderRepository since deliveries are currently stored as orders with 'Accepted' status
         orderRepository.getAllOrders(new OrderRepository.OrdersCallback() {
             @Override
             public void onSuccess(List<Order> orders) {
                 if (!isAdded()) return;
                 progressBar.setVisibility(View.GONE);
                 
-                // Filter orders accepted by the current user
                 allDeliveries = orders.stream()
                         .filter(o -> userId.equals(o.getAcceptedByUserId()))
                         .collect(Collectors.toList());

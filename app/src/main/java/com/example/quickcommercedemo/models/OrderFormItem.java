@@ -7,6 +7,7 @@ public class OrderFormItem {
     private String location;
     private double latitude;
     private double longitude;
+    private String deliveryDate;
     private String timeFrom;
     private String timeTo;
     private double deliveryFee;
@@ -38,6 +39,9 @@ public class OrderFormItem {
     public double getLongitude() { return longitude; }
     public void setLongitude(double longitude) { this.longitude = longitude; }
 
+    public String getDeliveryDate() { return deliveryDate; }
+    public void setDeliveryDate(String deliveryDate) { this.deliveryDate = deliveryDate; }
+
     public String getTimeFrom() { return timeFrom; }
     public void setTimeFrom(String timeFrom) { this.timeFrom = timeFrom; }
 
@@ -53,9 +57,9 @@ public class OrderFormItem {
     public boolean isValid() {
         return productName != null && !productName.trim().isEmpty()
                 && location != null && !location.trim().isEmpty()
+                && deliveryDate != null && !deliveryDate.trim().isEmpty()
                 && timeFrom != null && !timeFrom.trim().isEmpty()
                 && timeTo != null && !timeTo.trim().isEmpty()
                 && deliveryFee > 0;
     }
 }
-

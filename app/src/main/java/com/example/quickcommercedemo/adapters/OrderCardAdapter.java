@@ -22,7 +22,9 @@ public class OrderCardAdapter extends RecyclerView.Adapter<OrderCardAdapter.Orde
 
     public interface OnOrderClickListener {
         void onOrderClick(Order order);
-        void onActionClick(Order order);
+        void onEditClick(Order order);
+        void onCancelClick(Order order);
+        void onMainActionClick(Order order);
     }
 
     public OrderCardAdapter(List<Order> orders, OnOrderClickListener listener) {
@@ -49,8 +51,7 @@ public class OrderCardAdapter extends RecyclerView.Adapter<OrderCardAdapter.Orde
 
     @Override
     public void onBindViewHolder(@NonNull OrderViewHolder holder, int position) {
-        Order order = orders.get(position);
-        holder.bind(order, isAvailableOrders, listener);
+        holder.bind(orders.get(position), isAvailableOrders, listener);
     }
 
     @Override
@@ -59,36 +60,51 @@ public class OrderCardAdapter extends RecyclerView.Adapter<OrderCardAdapter.Orde
     }
 
     static class OrderViewHolder extends RecyclerView.ViewHolder {
-        private final TextView tvProductName, tvStatus, tvLocation, tvTimeRange, tvDeliveryFee;
-        private final MaterialButton btnAction;
+        private final TextView tvProductName, tvStatus, tvDescriptionSnippet, tvTimeRange, tvDeliveryFee;
+        private final MaterialButton btnView, btnEdit, btnCancel, btnMainAction;
 
         public OrderViewHolder(@NonNull View itemView) {
             super(itemView);
             tvProductName = itemView.findViewById(R.id.tvProductName);
             tvStatus = itemView.findViewById(R.id.tvStatus);
-            tvLocation = itemView.findViewById(R.id.tvLocation);
+            tvDescriptionSnippet = itemView.findViewById(R.id.tvDescriptionSnippet);
             tvTimeRange = itemView.findViewById(R.id.tvTimeRange);
             tvDeliveryFee = itemView.findViewById(R.id.tvDeliveryFee);
-            btnAction = itemView.findViewById(R.id.btnAction);
+            
+            btnView = itemView.findViewById(R.id.btnView);
+            btnEdit = itemView.findViewById(R.id.btnEdit);
+            btnCancel = itemView.findViewById(R.id.btnCancel);
+            btnMainAction = itemView.findViewById(R.id.btnMainAction);
         }
 
         public void bind(Order order, boolean isAvailableOrders, OnOrderClickListener listener) {
             tvProductName.setText(order.getProductName());
             tvStatus.setText(order.getStatus());
-            tvLocation.setText(order.getLocation());
+            tvDescriptionSnippet.setText(order.getDescription() != null ? order.getDescription() : "");
             tvTimeRange.setText("Time: " + order.getTimeFrom() + " - " + order.getTimeTo());
             tvDeliveryFee.setText(String.format("৳%.2f", order.getDeliveryFee()));
 
-            itemView.setOnClickListener(v -> listener.onOrderClick(order));
-
-            if (isAvailableOrders && "Pending".equals(order.getStatus())) {
-                btnAction.setVisibility(View.VISIBLE);
-                btnAction.setText("Accept Delivery");
+            if (isAvailableOrders) {
+                // View for Available Deliveries
+                btnView.setVisibility(View.GONE);
+                btnEdit.setVisibility(View.GONE);
+                btnCancel.setVisibility(View.GONE);
+                btnMainAction.setVisibility(View.VISIBLE);
+                btnMainAction.setText("Accept Delivery");
             } else {
-                btnAction.setVisibility(View.GONE);
+                // View for My Orders
+                btnView.setVisibility(View.VISIBLE);
+                boolean isPending = "Pending".equals(order.getStatus());
+                btnEdit.setVisibility(isPending ? View.VISIBLE : View.GONE);
+                btnCancel.setVisibility(isPending ? View.VISIBLE : View.GONE);
+                btnMainAction.setVisibility(View.GONE);
             }
 
-            btnAction.setOnClickListener(v -> listener.onActionClick(order));
+            itemView.setOnClickListener(v -> listener.onOrderClick(order));
+            btnView.setOnClickListener(v -> listener.onOrderClick(order));
+            btnEdit.setOnClickListener(v -> listener.onEditClick(order));
+            btnCancel.setOnClickListener(v -> listener.onCancelClick(order));
+            btnMainAction.setOnClickListener(v -> listener.onMainActionClick(order));
         }
     }
 }

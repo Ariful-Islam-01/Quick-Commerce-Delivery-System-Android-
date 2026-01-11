@@ -1,5 +1,6 @@
 package com.example.quickcommercedemo.fragments;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
@@ -18,6 +19,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.quickcommercedemo.MainActivity;
 import com.example.quickcommercedemo.R;
 import com.example.quickcommercedemo.activities.OrderDetailsActivity;
 import com.example.quickcommercedemo.adapters.OrderCardAdapter;
@@ -103,16 +105,51 @@ public class MyOrdersFragment extends Fragment {
         adapter = new OrderCardAdapter(new ArrayList<>(), new OrderCardAdapter.OnOrderClickListener() {
             @Override
             public void onOrderClick(Order order) {
-                Intent intent = new Intent(requireContext(), OrderDetailsActivity.class);
-                intent.putExtra("orderId", order.getOrderId());
-                startActivity(intent);
+                viewOrderDetails(order);
             }
 
             @Override
-            public void onActionClick(Order order) {
+            public void onEditClick(Order order) {
+                CreateOrderFragment editFragment = CreateOrderFragment.newInstance(order.getOrderId());
+                ((MainActivity)requireActivity()).navigateToFragment(editFragment);
+            }
+
+            @Override
+            public void onCancelClick(Order order) {
+                confirmAndCancelOrder(order);
+            }
+
+            @Override
+            public void onMainActionClick(Order order) {
             }
         });
         rvOrders.setAdapter(adapter);
+    }
+
+    private void viewOrderDetails(Order order) {
+        Intent intent = new Intent(requireContext(), OrderDetailsActivity.class);
+        intent.putExtra("orderId", order.getOrderId());
+        startActivity(intent);
+    }
+
+    private void confirmAndCancelOrder(Order order) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Cancel Order")
+                .setMessage("Are you sure you want to cancel this order?")
+                .setPositiveButton("Yes", (dialog, which) -> {
+                    orderRepository.updateOrderStatus(order.getOrderId(), "Cancelled", new OrderRepository.VoidCallback() {
+                        @Override
+                        public void onSuccess() {
+                            Toast.makeText(requireContext(), "Order cancelled", Toast.LENGTH_SHORT).show();
+                        }
+                        @Override
+                        public void onFailure(Exception e) {
+                            Toast.makeText(requireContext(), "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                })
+                .setNegativeButton("No", null)
+                .show();
     }
 
     private void setupTabs() {
@@ -151,6 +188,9 @@ public class MyOrdersFragment extends Fragment {
                 break;
             case 3: // Completed
                 filteredByStatusOrders = allOrders.stream().filter(o -> "Delivered".equals(o.getStatus())).collect(Collectors.toList());
+                break;
+            case 4: // Cancelled
+                filteredByStatusOrders = allOrders.stream().filter(o -> "Cancelled".equals(o.getStatus())).collect(Collectors.toList());
                 break;
             default: // All
                 filteredByStatusOrders = new ArrayList<>(allOrders);

@@ -10,6 +10,7 @@ public class Order {
     private String location;
     private double latitude;
     private double longitude;
+    private String deliveryDate;
     private String timeFrom;
     private String timeTo;
     private double deliveryFee;
@@ -25,7 +26,7 @@ public class Order {
 
     public Order(String customerId, String customerName, String category, String productName,
                  String description, String location, double latitude, double longitude,
-                 String timeFrom, String timeTo, double deliveryFee) {
+                 String deliveryDate, String timeFrom, String timeTo, double deliveryFee) {
         this.customerId = customerId;
         this.customerName = customerName;
         this.category = category;
@@ -34,6 +35,7 @@ public class Order {
         this.location = location;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.deliveryDate = deliveryDate;
         this.timeFrom = timeFrom;
         this.timeTo = timeTo;
         this.deliveryFee = deliveryFee;
@@ -69,6 +71,9 @@ public class Order {
 
     public double getLongitude() { return longitude; }
     public void setLongitude(double longitude) { this.longitude = longitude; }
+
+    public String getDeliveryDate() { return deliveryDate; }
+    public void setDeliveryDate(String deliveryDate) { this.deliveryDate = deliveryDate; }
 
     public String getTimeFrom() { return timeFrom; }
     public void setTimeFrom(String timeFrom) { this.timeFrom = timeFrom; }

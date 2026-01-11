@@ -1,5 +1,6 @@
 package com.example.quickcommercedemo.fragments;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.quickcommercedemo.R;
+import com.example.quickcommercedemo.activities.OrderDetailsActivity;
 import com.example.quickcommercedemo.adapters.OrderCardAdapter;
 import com.example.quickcommercedemo.models.Order;
 import com.example.quickcommercedemo.repositories.OrderRepository;
@@ -56,11 +58,19 @@ public class AvailableOrdersFragment extends Fragment {
         adapter = new OrderCardAdapter(new ArrayList<>(), true, new OrderCardAdapter.OnOrderClickListener() {
             @Override
             public void onOrderClick(Order order) {
-                // Show order details if needed
+                Intent intent = new Intent(requireContext(), OrderDetailsActivity.class);
+                intent.putExtra("orderId", order.getOrderId());
+                startActivity(intent);
             }
 
             @Override
-            public void onActionClick(Order order) {
+            public void onEditClick(Order order) {}
+
+            @Override
+            public void onCancelClick(Order order) {}
+
+            @Override
+            public void onMainActionClick(Order order) {
                 acceptOrder(order);
             }
         });
@@ -77,7 +87,6 @@ public class AvailableOrdersFragment extends Fragment {
                 if (!isAdded()) return;
                 progressBar.setVisibility(View.GONE);
                 
-                // Filter out user's own orders
                 List<Order> otherUsersOrders = new ArrayList<>();
                 for (Order o : orders) {
                     if (!o.getCustomerId().equals(currentUserId)) {
@@ -106,14 +115,14 @@ public class AvailableOrdersFragment extends Fragment {
             @Override
             public void onSuccess() {
                 if (!isAdded()) return;
-                Toast.makeText(requireContext(), "Order accepted! Check My Deliveries.", Toast.LENGTH_SHORT).show();
-                loadAvailableOrders(); // Refresh list
+                Toast.makeText(requireContext(), "Order accepted!", Toast.LENGTH_SHORT).show();
+                loadAvailableOrders();
             }
 
             @Override
             public void onFailure(Exception e) {
                 if (!isAdded()) return;
-                Toast.makeText(requireContext(), "Failed to accept order: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
