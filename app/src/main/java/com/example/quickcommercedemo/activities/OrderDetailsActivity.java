@@ -1,6 +1,8 @@
 package com.example.quickcommercedemo.activities;
 
 import android.app.AlertDialog;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -29,10 +31,11 @@ import java.util.Locale;
 
 public class OrderDetailsActivity extends AppCompatActivity {
 
-    private TextView tvProductName, tvStatus, tvDescription, tvLocation, tvTime, tvFee, tvCategory;
+    private TextView tvProductName, tvStatus, tvDescription, tvLocation, tvTimeValue, tvFee, tvCategory, tvDateValue;
     private TextView tvContactRole, tvContactName;
-    private LinearLayout layoutDeliveryActions, layoutCustomerActions, cardContact, layoutTimeline;
-    private MaterialButton btnWorkflowAction, btnCancelOrder, btnRateDelivery;
+    private LinearLayout layoutDeliveryActions, layoutCustomerActions, layoutTimeline;
+    private View cardContact; // Changed from LinearLayout to View to fix ClassCastException
+    private MaterialButton btnWorkflowAction, btnCancelOrder, btnRateDelivery, btnCall, btnMessage;
 
     private OrderRepository orderRepository;
     private EarningRepository earningRepository;
@@ -49,6 +52,7 @@ public class OrderDetailsActivity extends AppCompatActivity {
 
         orderId = getIntent().getStringExtra("orderId");
         if (orderId == null) {
+            Toast.makeText(this, "Order not found", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -69,7 +73,8 @@ public class OrderDetailsActivity extends AppCompatActivity {
         tvCategory = findViewById(R.id.tvDetailCategory);
         tvDescription = findViewById(R.id.tvDetailDescription);
         tvLocation = findViewById(R.id.tvDetailLocation);
-        tvTime = findViewById(R.id.tvDetailTime);
+        tvDateValue = findViewById(R.id.tvDetailDateValue);
+        tvTimeValue = findViewById(R.id.tvDetailTimeValue);
         tvFee = findViewById(R.id.tvDetailFee);
 
         tvContactRole = findViewById(R.id.tvContactRole);
@@ -83,15 +88,18 @@ public class OrderDetailsActivity extends AppCompatActivity {
         btnWorkflowAction = findViewById(R.id.btnWorkflowAction);
         btnCancelOrder = findViewById(R.id.btnCancelOrder);
         btnRateDelivery = findViewById(R.id.btnRateDelivery);
+        btnCall = findViewById(R.id.btnCall);
+        btnMessage = findViewById(R.id.btnMessage);
 
-        btnCancelOrder.setOnClickListener(v -> cancelOrder());
-        btnRateDelivery.setOnClickListener(v -> showRatingDialog());
+        if (btnCancelOrder != null) btnCancelOrder.setOnClickListener(v -> cancelOrder());
+        if (btnRateDelivery != null) btnRateDelivery.setOnClickListener(v -> showRatingDialog());
     }
 
     private void loadOrderDetails() {
         orderRepository.getOrderById(orderId, new OrderRepository.OrderCallback() {
             @Override
             public void onSuccess(Order order) {
+                if (isFinishing()) return;
                 currentOrder = order;
                 updateUI();
                 updateTimeline();
@@ -99,50 +107,82 @@ public class OrderDetailsActivity extends AppCompatActivity {
 
             @Override
             public void onFailure(Exception e) {
-                Toast.makeText(OrderDetailsActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                if (isFinishing()) return;
+                Toast.makeText(OrderDetailsActivity.this, "Failed to load: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void updateUI() {
-        tvProductName.setText(currentOrder.getProductName());
-        tvStatus.setText(currentOrder.getStatus());
-        tvCategory.setText(currentOrder.getCategory());
-        tvDescription.setText(currentOrder.getDescription() != null && !currentOrder.getDescription().isEmpty() 
-                ? currentOrder.getDescription() : "No description provided");
-        tvLocation.setText(currentOrder.getLocation());
-        tvTime.setText(currentOrder.getTimeFrom() + " - " + currentOrder.getTimeTo());
-        tvFee.setText(String.format("৳%.2f", currentOrder.getDeliveryFee()));
+        if (currentOrder == null || isFinishing()) return;
+
+        tvProductName.setText(safeString(currentOrder.getProductName(), "No Name"));
+        tvStatus.setText(safeString(currentOrder.getStatus(), "Pending"));
+        tvCategory.setText(safeString(currentOrder.getCategory(), "General"));
+        tvDescription.setText(safeString(currentOrder.getDescription(), "No description provided"));
+        tvLocation.setText(safeString(currentOrder.getLocation(), "No location provided"));
+        tvDateValue.setText(safeString(currentOrder.getDeliveryDate(), "Not set"));
+        tvTimeValue.setText(String.format("%s - %s", safeString(currentOrder.getTimeFrom(), "Anytime"), safeString(currentOrder.getTimeTo(), "Anytime")));
+        tvFee.setText(String.format(Locale.getDefault(), "৳%.2f", currentOrder.getDeliveryFee()));
 
         String userId = sessionManager.getUserId();
+        if (userId == null) return;
 
-        // Role-based visibility
+        // Role-based logic
         if (userId.equals(currentOrder.getCustomerId())) {
-            layoutCustomerActions.setVisibility(View.VISIBLE);
-            layoutDeliveryActions.setVisibility(View.GONE);
-            
-            btnCancelOrder.setVisibility("Pending".equals(currentOrder.getStatus()) ? View.VISIBLE : View.GONE);
-            btnRateDelivery.setVisibility("Delivered".equals(currentOrder.getStatus()) ? View.VISIBLE : View.GONE);
-
-            if (currentOrder.getAcceptedByUserId() != null) {
-                cardContact.setVisibility(View.VISIBLE);
-                tvContactRole.setText("Delivery Partner");
-                tvContactName.setText(currentOrder.getAcceptedByName());
-            }
+            showCustomerView();
         } else if (userId.equals(currentOrder.getAcceptedByUserId())) {
-            layoutDeliveryActions.setVisibility(View.VISIBLE);
-            layoutCustomerActions.setVisibility(View.GONE);
-            cardContact.setVisibility(View.VISIBLE);
-            tvContactRole.setText("Customer");
-            tvContactName.setText(currentOrder.getCustomerName());
-
-            updateWorkflowButton();
+            showDeliveryPartnerView();
         } else if ("Pending".equals(currentOrder.getStatus())) {
-            // View by potential delivery partner
-            layoutDeliveryActions.setVisibility(View.VISIBLE);
-            btnWorkflowAction.setText("Accept Delivery");
-            btnWorkflowAction.setOnClickListener(v -> acceptOrder());
+            showPotentialPartnerView();
         }
+    }
+
+    private String safeString(String input, String fallback) {
+        return (input == null || input.isEmpty()) ? fallback : input;
+    }
+
+    private void showCustomerView() {
+        layoutCustomerActions.setVisibility(View.VISIBLE);
+        layoutDeliveryActions.setVisibility(View.GONE);
+        btnCancelOrder.setVisibility("Pending".equals(currentOrder.getStatus()) ? View.VISIBLE : View.GONE);
+        btnRateDelivery.setVisibility("Delivered".equals(currentOrder.getStatus()) ? View.VISIBLE : View.GONE);
+
+        if (currentOrder.getAcceptedByUserId() != null) {
+            cardContact.setVisibility(View.VISIBLE);
+            tvContactRole.setText("Delivery Partner");
+            tvContactName.setText(safeString(currentOrder.getAcceptedByName(), "Partner"));
+            setupContactButtons(currentOrder.getAcceptedByPhone());
+        }
+    }
+
+    private void showDeliveryPartnerView() {
+        layoutDeliveryActions.setVisibility(View.VISIBLE);
+        layoutCustomerActions.setVisibility(View.GONE);
+        cardContact.setVisibility(View.VISIBLE);
+        tvContactRole.setText("Customer");
+        tvContactName.setText(safeString(currentOrder.getCustomerName(), "Customer"));
+        setupContactButtons(currentOrder.getCustomerPhone());
+        updateWorkflowButton();
+    }
+
+    private void showPotentialPartnerView() {
+        layoutDeliveryActions.setVisibility(View.VISIBLE);
+        btnWorkflowAction.setText("Accept Delivery");
+        btnWorkflowAction.setOnClickListener(v -> acceptOrder());
+        cardContact.setVisibility(View.GONE);
+    }
+
+    private void setupContactButtons(String phone) {
+        if (phone == null || phone.isEmpty()) {
+            btnCall.setEnabled(false);
+            btnMessage.setEnabled(false);
+            return;
+        }
+        btnCall.setEnabled(true);
+        btnMessage.setEnabled(true);
+        btnCall.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + phone))));
+        btnMessage.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + phone))));
     }
 
     private void updateWorkflowButton() {
@@ -166,52 +206,37 @@ public class OrderDetailsActivity extends AppCompatActivity {
     }
 
     private void updateTimeline() {
+        if (currentOrder == null || layoutTimeline == null) return;
         layoutTimeline.removeAllViews();
         addTimelineItem("Order Created", currentOrder.getCreatedAt());
         if (currentOrder.getUpdatedAt() > currentOrder.getCreatedAt()) {
-            addTimelineItem("Status: " + currentOrder.getStatus(), currentOrder.getUpdatedAt());
+            addTimelineItem("Current Status: " + currentOrder.getStatus(), currentOrder.getUpdatedAt());
         }
     }
 
     private void addTimelineItem(String text, long timestamp) {
+        if (timestamp <= 0) return;
         View view = LayoutInflater.from(this).inflate(android.R.layout.simple_list_item_2, layoutTimeline, false);
         TextView tv1 = view.findViewById(android.R.id.text1);
         TextView tv2 = view.findViewById(android.R.id.text2);
-        
         tv1.setText(text);
-        SimpleDateFormat sdf = new SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault());
-        tv2.setText(sdf.format(new Date(timestamp)));
-        
+        tv2.setText(new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(new Date(timestamp)));
         layoutTimeline.addView(view);
     }
 
     private void acceptOrder() {
-        String userId = sessionManager.getUserId();
-        String userName = sessionManager.getUserName();
-        orderRepository.acceptOrder(orderId, userId, userName, new OrderRepository.VoidCallback() {
+        orderRepository.acceptOrder(orderId, sessionManager.getUserId(), sessionManager.getUserName(), new OrderRepository.VoidCallback() {
             @Override
-            public void onSuccess() {
-                Toast.makeText(OrderDetailsActivity.this, "Order accepted!", Toast.LENGTH_SHORT).show();
-                loadOrderDetails();
-            }
+            public void onSuccess() { loadOrderDetails(); }
             @Override
-            public void onFailure(Exception e) {
-                Toast.makeText(OrderDetailsActivity.this, "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
+            public void onFailure(Exception e) { Toast.makeText(OrderDetailsActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show(); }
         });
     }
 
     private void updateStatus(String status) {
         orderRepository.updateOrderStatus(orderId, status, new OrderRepository.VoidCallback() {
-            @Override
-            public void onSuccess() {
-                Toast.makeText(OrderDetailsActivity.this, "Status updated", Toast.LENGTH_SHORT).show();
-                loadOrderDetails();
-            }
-            @Override
-            public void onFailure(Exception e) {
-                Toast.makeText(OrderDetailsActivity.this, "Failed", Toast.LENGTH_SHORT).show();
-            }
+            @Override public void onSuccess() { loadOrderDetails(); }
+            @Override public void onFailure(Exception e) { Toast.makeText(OrderDetailsActivity.this, "Failed", Toast.LENGTH_SHORT).show(); }
         });
     }
 
@@ -219,37 +244,32 @@ public class OrderDetailsActivity extends AppCompatActivity {
         orderRepository.updateOrderStatus(orderId, "Delivered", new OrderRepository.VoidCallback() {
             @Override
             public void onSuccess() {
+                if (isFinishing()) return;
                 Earning earning = new Earning(currentOrder.getAcceptedByUserId(), currentOrder.getOrderId(), 
                         currentOrder.getProductName(), currentOrder.getLocation(), currentOrder.getDeliveryFee());
                 earningRepository.createEarning(earning, new EarningRepository.VoidCallback() {
                     @Override public void onSuccess() { loadOrderDetails(); }
-                    @Override public void onFailure(Exception e) {}
+                    @Override public void onFailure(Exception e) { loadOrderDetails(); }
                 });
             }
-            @Override
-            public void onFailure(Exception e) {}
+            @Override public void onFailure(Exception e) {}
         });
     }
 
     private void cancelOrder() {
         orderRepository.updateOrderStatus(orderId, "Cancelled", new OrderRepository.VoidCallback() {
             @Override public void onSuccess() { finish(); }
-            @Override public void onFailure(Exception e) {}
+            @Override public void onFailure(Exception e) { Toast.makeText(OrderDetailsActivity.this, "Error", Toast.LENGTH_SHORT).show(); }
         });
     }
 
     private void showRatingDialog() {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_rating, null);
-        RatingBar ratingBar = dialogView.findViewById(R.id.ratingBar);
-        EditText etFeedback = dialogView.findViewById(R.id.etFeedback);
-        MaterialButton btnSubmit = dialogView.findViewById(R.id.btnSubmit);
-        MaterialButton btnCancel = dialogView.findViewById(R.id.btnCancel);
-
-        AlertDialog dialog = new AlertDialog.Builder(this).setView(dialogView).create();
-        btnCancel.setOnClickListener(v -> dialog.dismiss());
-        btnSubmit.setOnClickListener(v -> {
-            submitRating(ratingBar.getRating(), etFeedback.getText().toString(), dialog);
-        });
+        View dv = LayoutInflater.from(this).inflate(R.layout.dialog_rating, null);
+        RatingBar rb = dv.findViewById(R.id.ratingBar);
+        EditText ef = dv.findViewById(R.id.etFeedback);
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(dv).create();
+        dv.findViewById(R.id.btnCancel).setOnClickListener(v -> dialog.dismiss());
+        dv.findViewById(R.id.btnSubmit).setOnClickListener(v -> submitRating(rb.getRating(), ef.getText().toString(), dialog));
         dialog.show();
     }
 
@@ -257,14 +277,12 @@ public class OrderDetailsActivity extends AppCompatActivity {
         Rating rating = new Rating(currentOrder.getOrderId(), currentOrder.getCustomerId(), 
                 currentOrder.getAcceptedByUserId(), val, feedback);
         ratingRepository.submitRating(rating, new RatingRepository.VoidCallback() {
-            @Override
-            public void onSuccess() {
+            @Override public void onSuccess() {
                 dialog.dismiss();
                 btnRateDelivery.setVisibility(View.GONE);
-                Toast.makeText(OrderDetailsActivity.this, "Thank you!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(OrderDetailsActivity.this, "Success", Toast.LENGTH_SHORT).show();
             }
-            @Override
-            public void onFailure(Exception e) {}
+            @Override public void onFailure(Exception e) {}
         });
     }
 }

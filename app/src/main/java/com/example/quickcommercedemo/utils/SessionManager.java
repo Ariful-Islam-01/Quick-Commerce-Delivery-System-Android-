@@ -10,6 +10,7 @@ public class SessionManager {
     private static final String KEY_IS_LOGGED_IN = "isLoggedIn";
     private static final String KEY_USER_NAME = "userName";
     private static final String KEY_USER_EMAIL = "userEmail";
+    private static final String KEY_USER_PHONE = "userPhone";
     private static final String KEY_USER_ADDRESS = "userAddress";
     private static final String KEY_DARK_MODE = "darkMode";
 
@@ -28,6 +29,15 @@ public class SessionManager {
         editor.putBoolean(KEY_IS_ADMIN, isAdmin);
         editor.putBoolean(KEY_IS_LOGGED_IN, true);
         editor.apply();
+    }
+
+    public void setUserPhone(String phone) {
+        editor.putString(KEY_USER_PHONE, phone);
+        editor.apply();
+    }
+
+    public String getUserPhone() {
+        return preferences.getString(KEY_USER_PHONE, "");
     }
 
     public void setUserAddress(String address) {

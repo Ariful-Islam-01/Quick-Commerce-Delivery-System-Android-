@@ -127,8 +127,11 @@ public class OrderCardAdapter extends RecyclerView.Adapter<OrderCardAdapter.Orde
                 btnMainAction.setVisibility(View.GONE);
             }
 
-            itemView.setOnClickListener(v -> listener.onOrderClick(order));
-            btnView.setOnClickListener(v -> listener.onOrderClick(order));
+            // Click listener for the whole item or the View button
+            View.OnClickListener detailClickListener = v -> listener.onOrderClick(order);
+            itemView.setOnClickListener(detailClickListener);
+            btnView.setOnClickListener(detailClickListener);
+            
             btnEdit.setOnClickListener(v -> listener.onEditClick(order));
             btnCancel.setOnClickListener(v -> listener.onCancelClick(order));
             btnMainAction.setOnClickListener(v -> listener.onMainActionClick(order));
