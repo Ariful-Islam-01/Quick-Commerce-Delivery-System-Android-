@@ -1,5 +1,6 @@
 package com.example.quickcommercedemo.fragments;
 
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
@@ -65,7 +66,7 @@ public class ManageOrdersFragment extends Fragment {
 
     private void setupRecyclerView() {
         rvOrders.setLayoutManager(new LinearLayoutManager(requireContext()));
-        adapter = new OrderCardAdapter(new ArrayList<>(), new OrderCardAdapter.OnOrderClickListener() {
+        adapter = new OrderCardAdapter(new ArrayList<>(), false, false, true, new OrderCardAdapter.OnOrderClickListener() {
             @Override
             public void onOrderClick(Order order) {
                 Intent intent = new Intent(requireContext(), OrderDetailsActivity.class);
@@ -77,15 +78,38 @@ public class ManageOrdersFragment extends Fragment {
             public void onEditClick(Order order) {}
 
             @Override
-            public void onCancelClick(Order order) {
-                // Admin specific cancellation logic can be added here
-                Toast.makeText(requireContext(), "Admin order cancellation logic", Toast.LENGTH_SHORT).show();
+            public void onCancelClick(Order order) {}
+
+            @Override
+            public void onDeleteClick(Order order) {
+                confirmAndDeleteOrder(order);
             }
 
             @Override
             public void onMainActionClick(Order order) {}
         });
         rvOrders.setAdapter(adapter);
+    }
+
+    private void confirmAndDeleteOrder(Order order) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Delete Order")
+                .setMessage("Are you sure you want to permanently delete this order? This action cannot be undone.")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    orderRepository.deleteOrder(order.getOrderId(), new OrderRepository.VoidCallback() {
+                        @Override
+                        public void onSuccess() {
+                            Toast.makeText(requireContext(), "Order deleted successfully", Toast.LENGTH_SHORT).show();
+                            loadAllOrders();
+                        }
+                        @Override
+                        public void onFailure(Exception e) {
+                            Toast.makeText(requireContext(), "Failed to delete order", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void setupTabs() {

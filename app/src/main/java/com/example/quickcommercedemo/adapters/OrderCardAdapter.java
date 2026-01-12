@@ -21,26 +21,33 @@ public class OrderCardAdapter extends RecyclerView.Adapter<OrderCardAdapter.Orde
     private final OnOrderClickListener listener;
     private final boolean isAvailableOrders;
     private final boolean isMyTask;
+    private final boolean isAdmin;
 
     public interface OnOrderClickListener {
         void onOrderClick(Order order);
         void onEditClick(Order order);
         void onCancelClick(Order order);
+        void onDeleteClick(Order order);
         void onMainActionClick(Order order);
     }
 
     public OrderCardAdapter(List<Order> orders, OnOrderClickListener listener) {
-        this(orders, false, false, listener);
+        this(orders, false, false, false, listener);
     }
 
     public OrderCardAdapter(List<Order> orders, boolean isAvailableOrders, OnOrderClickListener listener) {
-        this(orders, isAvailableOrders, false, listener);
+        this(orders, isAvailableOrders, false, false, listener);
     }
 
     public OrderCardAdapter(List<Order> orders, boolean isAvailableOrders, boolean isMyTask, OnOrderClickListener listener) {
+        this(orders, isAvailableOrders, isMyTask, false, listener);
+    }
+
+    public OrderCardAdapter(List<Order> orders, boolean isAvailableOrders, boolean isMyTask, boolean isAdmin, OnOrderClickListener listener) {
         this.orders = orders;
         this.isAvailableOrders = isAvailableOrders;
         this.isMyTask = isMyTask;
+        this.isAdmin = isAdmin;
         this.listener = listener;
     }
 
@@ -58,7 +65,7 @@ public class OrderCardAdapter extends RecyclerView.Adapter<OrderCardAdapter.Orde
 
     @Override
     public void onBindViewHolder(@NonNull OrderViewHolder holder, int position) {
-        holder.bind(orders.get(position), isAvailableOrders, isMyTask, listener);
+        holder.bind(orders.get(position), isAvailableOrders, isMyTask, isAdmin, listener);
     }
 
     @Override
@@ -68,7 +75,7 @@ public class OrderCardAdapter extends RecyclerView.Adapter<OrderCardAdapter.Orde
 
     static class OrderViewHolder extends RecyclerView.ViewHolder {
         private final TextView tvProductName, tvStatus, tvDescriptionSnippet, tvTimeRange, tvDeliveryFee;
-        private final MaterialButton btnView, btnEdit, btnCancel, btnMainAction;
+        private final MaterialButton btnView, btnEdit, btnCancel, btnDelete, btnMainAction;
 
         public OrderViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -81,10 +88,11 @@ public class OrderCardAdapter extends RecyclerView.Adapter<OrderCardAdapter.Orde
             btnView = itemView.findViewById(R.id.btnView);
             btnEdit = itemView.findViewById(R.id.btnEdit);
             btnCancel = itemView.findViewById(R.id.btnCancel);
+            btnDelete = itemView.findViewById(R.id.btnDelete);
             btnMainAction = itemView.findViewById(R.id.btnMainAction);
         }
 
-        public void bind(Order order, boolean isAvailableOrders, boolean isMyTask, OnOrderClickListener listener) {
+        public void bind(Order order, boolean isAvailableOrders, boolean isMyTask, boolean isAdmin, OnOrderClickListener listener) {
             tvProductName.setText(order.getProductName());
             tvStatus.setText(order.getStatus());
             tvDescriptionSnippet.setText(order.getDescription() != null ? order.getDescription() : "");
@@ -108,32 +116,41 @@ public class OrderCardAdapter extends RecyclerView.Adapter<OrderCardAdapter.Orde
                 btnView.setVisibility(View.VISIBLE);
                 btnEdit.setVisibility(View.GONE);
                 btnCancel.setVisibility(View.GONE);
+                btnDelete.setVisibility(View.GONE);
                 btnMainAction.setVisibility(View.VISIBLE);
                 btnMainAction.setText("Accept Delivery");
             } else if (isMyTask) {
                 btnView.setVisibility(View.VISIBLE);
                 btnEdit.setVisibility(View.GONE);
                 btnCancel.setVisibility(View.GONE);
+                btnDelete.setVisibility(View.GONE);
                 
                 boolean isActive = !"Delivered".equals(order.getStatus()) && !"Cancelled".equals(order.getStatus());
                 btnMainAction.setVisibility(isActive ? View.VISIBLE : View.GONE);
                 btnMainAction.setText("Update Status");
+            } else if (isAdmin) {
+                btnView.setVisibility(View.VISIBLE);
+                btnEdit.setVisibility(View.GONE);
+                btnCancel.setVisibility(View.GONE);
+                btnDelete.setVisibility(View.VISIBLE); // Admin can delete
+                btnMainAction.setVisibility(View.GONE);
             } else {
                 // My Requested Orders
                 btnView.setVisibility(View.VISIBLE);
                 boolean isPending = "Pending".equals(order.getStatus());
                 btnEdit.setVisibility(isPending ? View.VISIBLE : View.GONE);
                 btnCancel.setVisibility(isPending ? View.VISIBLE : View.GONE);
+                btnDelete.setVisibility(View.GONE);
                 btnMainAction.setVisibility(View.GONE);
             }
 
-            // Click listener for the whole item or the View button
             View.OnClickListener detailClickListener = v -> listener.onOrderClick(order);
             itemView.setOnClickListener(detailClickListener);
             btnView.setOnClickListener(detailClickListener);
             
             btnEdit.setOnClickListener(v -> listener.onEditClick(order));
             btnCancel.setOnClickListener(v -> listener.onCancelClick(order));
+            btnDelete.setOnClickListener(v -> listener.onDeleteClick(order));
             btnMainAction.setOnClickListener(v -> listener.onMainActionClick(order));
         }
     }

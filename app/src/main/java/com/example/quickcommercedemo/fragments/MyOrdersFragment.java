@@ -110,6 +110,7 @@ public class MyOrdersFragment extends Fragment {
 
             @Override
             public void onEditClick(Order order) {
+                // Navigate to CreateOrderFragment in Edit Mode
                 CreateOrderFragment editFragment = CreateOrderFragment.newInstance(order.getOrderId());
                 ((MainActivity)requireActivity()).navigateToFragment(editFragment);
             }
@@ -117,6 +118,11 @@ public class MyOrdersFragment extends Fragment {
             @Override
             public void onCancelClick(Order order) {
                 confirmAndCancelOrder(order);
+            }
+
+            @Override
+            public void onDeleteClick(Order order) {
+                // Not typically used by customers, but required by interface
             }
 
             @Override

@@ -75,8 +75,12 @@ public class AvailableOrdersFragment extends Fragment {
 
             @Override
             public void onEditClick(Order order) {}
+            
             @Override
             public void onCancelClick(Order order) {}
+
+            @Override
+            public void onDeleteClick(Order order) {} // Implemented missing method
 
             @Override
             public void onMainActionClick(Order order) {
