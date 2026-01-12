@@ -1,5 +1,6 @@
 package com.example.quickcommercedemo.fragments;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,10 +16,12 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.quickcommercedemo.R;
+import com.example.quickcommercedemo.activities.OrderDetailsActivity;
 import com.example.quickcommercedemo.adapters.NotificationAdapter;
 import com.example.quickcommercedemo.models.Notification;
 import com.example.quickcommercedemo.repositories.NotificationRepository;
 import com.example.quickcommercedemo.utils.SessionManager;
+import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +35,7 @@ public class NotificationsFragment extends Fragment {
     private NotificationRepository notificationRepository;
     private SessionManager sessionManager;
     private NotificationAdapter adapter;
+    private ValueEventListener notificationListener;
 
     @Nullable
     @Override
@@ -46,7 +50,7 @@ public class NotificationsFragment extends Fragment {
         tvEmpty = view.findViewById(R.id.tvEmptyNotifications);
 
         setupRecyclerView();
-        loadNotifications();
+        startListeningForNotifications();
 
         return view;
     }
@@ -54,19 +58,25 @@ public class NotificationsFragment extends Fragment {
     private void setupRecyclerView() {
         rvNotifications.setLayoutManager(new LinearLayoutManager(requireContext()));
         adapter = new NotificationAdapter(new ArrayList<>(), notification -> {
-            // Handle notification click (mark as read, navigate to related order, etc.)
             if (!notification.isRead()) {
                 markAsRead(notification);
+            }
+            
+            // Navigate to related order if applicable
+            if (notification.getRelatedId() != null && !notification.getRelatedId().isEmpty()) {
+                Intent intent = new Intent(requireContext(), OrderDetailsActivity.class);
+                intent.putExtra("orderId", notification.getRelatedId());
+                startActivity(intent);
             }
         });
         rvNotifications.setAdapter(adapter);
     }
 
-    private void loadNotifications() {
+    private void startListeningForNotifications() {
         progressBar.setVisibility(View.VISIBLE);
         String userId = sessionManager.getUserId();
 
-        notificationRepository.getNotificationsByUserId(userId, new NotificationRepository.NotificationsCallback() {
+        notificationListener = notificationRepository.listenToNotificationsByUserId(userId, new NotificationRepository.NotificationsCallback() {
             @Override
             public void onSuccess(List<Notification> notifications) {
                 if (!isAdded()) return;
@@ -85,9 +95,24 @@ public class NotificationsFragment extends Fragment {
     }
 
     private void markAsRead(Notification notification) {
-        // Implementation for marking as read in repository would go here
-        // For now just local update
-        notification.setRead(true);
-        adapter.notifyDataSetChanged();
+        notificationRepository.markAsRead(notification.getNotificationId(), new NotificationRepository.VoidCallback() {
+            @Override
+            public void onSuccess() {
+                // UI will auto-update via the listener
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                Toast.makeText(requireContext(), "Failed to update notification", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        if (notificationListener != null) {
+            notificationRepository.removeListener(notificationListener);
+        }
     }
 }

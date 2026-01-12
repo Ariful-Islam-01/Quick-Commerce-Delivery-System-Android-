@@ -16,9 +16,11 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.quickcommercedemo.R;
 import com.example.quickcommercedemo.models.Earning;
+import com.example.quickcommercedemo.models.Notification;
 import com.example.quickcommercedemo.models.Order;
 import com.example.quickcommercedemo.models.Rating;
 import com.example.quickcommercedemo.repositories.EarningRepository;
+import com.example.quickcommercedemo.repositories.NotificationRepository;
 import com.example.quickcommercedemo.repositories.OrderRepository;
 import com.example.quickcommercedemo.repositories.RatingRepository;
 import com.example.quickcommercedemo.repositories.UserRepository;
@@ -34,13 +36,14 @@ public class OrderDetailsActivity extends AppCompatActivity {
     private TextView tvProductName, tvStatus, tvDescription, tvLocation, tvTimeValue, tvFee, tvCategory, tvDateValue;
     private TextView tvContactRole, tvContactName;
     private LinearLayout layoutDeliveryActions, layoutCustomerActions, layoutTimeline;
-    private View cardContact; // Changed from LinearLayout to View to fix ClassCastException
+    private View cardContact;
     private MaterialButton btnWorkflowAction, btnCancelOrder, btnRateDelivery, btnCall, btnMessage;
 
     private OrderRepository orderRepository;
     private EarningRepository earningRepository;
     private RatingRepository ratingRepository;
     private UserRepository userRepository;
+    private NotificationRepository notificationRepository;
     private SessionManager sessionManager;
     private Order currentOrder;
     private String orderId;
@@ -61,6 +64,7 @@ public class OrderDetailsActivity extends AppCompatActivity {
         earningRepository = new EarningRepository();
         ratingRepository = new RatingRepository();
         userRepository = new UserRepository();
+        notificationRepository = new NotificationRepository();
         sessionManager = new SessionManager(this);
 
         initViews();
@@ -128,7 +132,6 @@ public class OrderDetailsActivity extends AppCompatActivity {
         String userId = sessionManager.getUserId();
         if (userId == null) return;
 
-        // Role-based logic
         if (userId.equals(currentOrder.getCustomerId())) {
             showCustomerView();
         } else if (userId.equals(currentOrder.getAcceptedByUserId())) {
@@ -210,7 +213,7 @@ public class OrderDetailsActivity extends AppCompatActivity {
         layoutTimeline.removeAllViews();
         addTimelineItem("Order Created", currentOrder.getCreatedAt());
         if (currentOrder.getUpdatedAt() > currentOrder.getCreatedAt()) {
-            addTimelineItem("Current Status: " + currentOrder.getStatus(), currentOrder.getUpdatedAt());
+            addTimelineItem("Status Update: " + currentOrder.getStatus(), currentOrder.getUpdatedAt());
         }
     }
 
@@ -224,10 +227,22 @@ public class OrderDetailsActivity extends AppCompatActivity {
         layoutTimeline.addView(view);
     }
 
+    private void sendNotification(String userId, String title, String message, Notification.NotificationType type) {
+        Notification notification = new Notification(userId, title, message, type, orderId);
+        notificationRepository.createNotification(notification, null);
+    }
+
     private void acceptOrder() {
-        orderRepository.acceptOrder(orderId, sessionManager.getUserId(), sessionManager.getUserName(), new OrderRepository.VoidCallback() {
+        String userId = sessionManager.getUserId();
+        String userName = sessionManager.getUserName();
+        orderRepository.acceptOrder(orderId, userId, userName, new OrderRepository.VoidCallback() {
             @Override
-            public void onSuccess() { loadOrderDetails(); }
+            public void onSuccess() {
+                sendNotification(currentOrder.getCustomerId(), "Delivery Partner Found!", 
+                        userName + " has accepted your order for " + currentOrder.getProductName(), 
+                        Notification.NotificationType.ORDER_UPDATE);
+                loadOrderDetails();
+            }
             @Override
             public void onFailure(Exception e) { Toast.makeText(OrderDetailsActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show(); }
         });
@@ -235,8 +250,15 @@ public class OrderDetailsActivity extends AppCompatActivity {
 
     private void updateStatus(String status) {
         orderRepository.updateOrderStatus(orderId, status, new OrderRepository.VoidCallback() {
-            @Override public void onSuccess() { loadOrderDetails(); }
-            @Override public void onFailure(Exception e) { Toast.makeText(OrderDetailsActivity.this, "Failed", Toast.LENGTH_SHORT).show(); }
+            @Override
+            public void onSuccess() {
+                sendNotification(currentOrder.getCustomerId(), "Order " + status, 
+                        "Your order for " + currentOrder.getProductName() + " is now " + status, 
+                        Notification.NotificationType.ORDER_UPDATE);
+                loadOrderDetails();
+            }
+            @Override
+            public void onFailure(Exception e) { Toast.makeText(OrderDetailsActivity.this, "Failed", Toast.LENGTH_SHORT).show(); }
         });
     }
 
@@ -244,11 +266,19 @@ public class OrderDetailsActivity extends AppCompatActivity {
         orderRepository.updateOrderStatus(orderId, "Delivered", new OrderRepository.VoidCallback() {
             @Override
             public void onSuccess() {
-                if (isFinishing()) return;
+                sendNotification(currentOrder.getCustomerId(), "Order Delivered!", 
+                        "Your order for " + currentOrder.getProductName() + " has been delivered. Please rate your experience.", 
+                        Notification.NotificationType.SUCCESS);
+                
                 Earning earning = new Earning(currentOrder.getAcceptedByUserId(), currentOrder.getOrderId(), 
                         currentOrder.getProductName(), currentOrder.getLocation(), currentOrder.getDeliveryFee());
                 earningRepository.createEarning(earning, new EarningRepository.VoidCallback() {
-                    @Override public void onSuccess() { loadOrderDetails(); }
+                    @Override public void onSuccess() { 
+                        sendNotification(currentOrder.getAcceptedByUserId(), "Payment Received", 
+                                "You earned ৳" + currentOrder.getDeliveryFee() + " for delivering " + currentOrder.getProductName(), 
+                                Notification.NotificationType.EARNING);
+                        loadOrderDetails(); 
+                    }
                     @Override public void onFailure(Exception e) { loadOrderDetails(); }
                 });
             }
@@ -258,8 +288,15 @@ public class OrderDetailsActivity extends AppCompatActivity {
 
     private void cancelOrder() {
         orderRepository.updateOrderStatus(orderId, "Cancelled", new OrderRepository.VoidCallback() {
-            @Override public void onSuccess() { finish(); }
-            @Override public void onFailure(Exception e) { Toast.makeText(OrderDetailsActivity.this, "Error", Toast.LENGTH_SHORT).show(); }
+            @Override public void onSuccess() { 
+                if (currentOrder.getAcceptedByUserId() != null) {
+                    sendNotification(currentOrder.getAcceptedByUserId(), "Order Cancelled", 
+                            "The customer has cancelled the order for " + currentOrder.getProductName(), 
+                            Notification.NotificationType.WARNING);
+                }
+                finish(); 
+            }
+            @Override public void onFailure(Exception e) {}
         });
     }
 
@@ -278,6 +315,9 @@ public class OrderDetailsActivity extends AppCompatActivity {
                 currentOrder.getAcceptedByUserId(), val, feedback);
         ratingRepository.submitRating(rating, new RatingRepository.VoidCallback() {
             @Override public void onSuccess() {
+                sendNotification(currentOrder.getAcceptedByUserId(), "New Rating!", 
+                        "A customer gave you " + val + " stars for your delivery.", 
+                        Notification.NotificationType.INFO);
                 dialog.dismiss();
                 btnRateDelivery.setVisibility(View.GONE);
                 Toast.makeText(OrderDetailsActivity.this, "Success", Toast.LENGTH_SHORT).show();
