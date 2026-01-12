@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.quickcommercedemo.R;
 import com.example.quickcommercedemo.adapters.UserManagementAdapter;
+import com.example.quickcommercedemo.dialogs.EditUserDialogFragment;
 import com.example.quickcommercedemo.models.User;
 import com.example.quickcommercedemo.repositories.UserRepository;
 
@@ -61,7 +62,7 @@ public class ManageUsersFragment extends Fragment {
         adapter = new UserManagementAdapter(new ArrayList<>(), new UserManagementAdapter.OnUserActionListener() {
             @Override
             public void onEditUser(User user) {
-                Toast.makeText(requireContext(), "Edit user logic coming soon", Toast.LENGTH_SHORT).show();
+                showEditUserDialog(user);
             }
 
             @Override
@@ -70,6 +71,14 @@ public class ManageUsersFragment extends Fragment {
             }
         });
         rvUsers.setAdapter(adapter);
+    }
+
+    private void showEditUserDialog(User user) {
+        EditUserDialogFragment dialog = EditUserDialogFragment.newInstance(user, () -> {
+            loadUsers(); // Refresh list after update
+            Toast.makeText(requireContext(), "User profile updated successfully", Toast.LENGTH_SHORT).show();
+        });
+        dialog.show(getChildFragmentManager(), "EditUserDialog");
     }
 
     private void setupSearch() {
