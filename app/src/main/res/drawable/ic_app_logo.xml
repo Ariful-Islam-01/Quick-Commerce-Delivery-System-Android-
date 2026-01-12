@@ -1,38 +1,41 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="200dp"
     android:height="200dp"
-    android:viewportWidth="200"
-    android:viewportHeight="200">
-  <path
-      android:pathData="M100,100m-100,0a100,100 0,1 1,200 0a100,100 0,1 1,-200 0"
-      android:fillColor="@color/white"/>
-  <path
-      android:pathData="M145,70l-15,-15l-65,0c-8.28,0 -15,6.72 -15,15l0,60c0,8.28 6.72,15 15,15l65,0l15,-15l0,-60z"
-      android:fillColor="@color/primary_color"/>
-  <path
-      android:pathData="M145,70l-30,30l30,30"
-      android:strokeWidth="8"
-      android:fillColor="#00000000"
-      android:strokeColor="@color/white"
-      android:strokeLineCap="round"
-      android:strokeLineJoin="round"/>
-  <path
-      android:pathData="M65,85l40,0"
-      android:strokeWidth="6"
-      android:fillColor="#00000000"
-      android:strokeColor="@color/white"
-      android:strokeLineCap="round"/>
-  <path
-      android:pathData="M65,100l30,0"
-      android:strokeWidth="6"
-      android:fillColor="#00000000"
-      android:strokeColor="@color/white"
-      android:strokeLineCap="round"/>
-  <path
-      android:pathData="M65,115l50,0"
-      android:strokeWidth="6"
-      android:fillColor="#00000000"
-      android:strokeColor="@color/white"
-      android:strokeLineCap="round"/>
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+
+    <!-- Box Background -->
+    <path
+        android:pathData="M37,10 h60 v58 h-60 z"
+        android:fillColor="#FFD54F"
+        android:strokeColor="#000000"
+        android:strokeWidth="2"/>
+
+    <!-- Tape on Box -->
+    <path
+        android:pathData="M57,10 v20 l10,-5 l10,5 v-20 z"
+        android:fillColor="#FFF176"
+        android:strokeColor="#000000"
+        android:strokeWidth="2"/>
+
+    <!-- Clock Outer Circle -->
+    <path
+        android:pathData="M45,40 a28,28 0,1,0 0,56 a28,28 0,1,0 0,-56"
+        android:fillColor="#80DEEA"
+        android:strokeColor="#000000"
+        android:strokeWidth="2"/>
+
+    <!-- Clock Inner Circle (White part) -->
+    <path
+        android:pathData="M45,48 a20,20 0,1,0 0,40 a20,20 0,1,0 0,-40"
+        android:fillColor="#FFFFFF"/>
+
+    <!-- Clock Hands -->
+    <path
+        android:pathData="M45,68 v-12 M45,68 h12"
+        android:strokeColor="#000000"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+
 </vector>

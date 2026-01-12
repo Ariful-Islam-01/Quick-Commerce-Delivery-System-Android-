@@ -3,13 +3,41 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="@color/white"
-        android:pathData="M54,20 C35.22,20 20,35.22 20,54 C20,72.78 35.22,88 54,88 C72.78,88 88,72.78 88,54 C88,35.22 72.78,20 54,20 Z" />
-    <path
-        android:fillColor="@color/primary_color"
-        android:pathData="M75,40 L65,40 L65,35 C65,32.24 62.76,30 60,30 L48,30 C45.24,30 43,32.24 43,35 L43,40 L33,40 C31.34,40 30,41.34 30,43 L30,70 C30,71.66 31.34,73 33,73 L75,73 C76.66,73 78,71.66 78,70 L78,43 C78,41.34 76.66,40 75,40 Z M46,35 C46,33.9 46.9,33 48,33 L60,33 C61.1,33 62,33.9 62,35 L62,40 L46,40 L46,35 Z M54,65 C49.58,65 46,61.42 46,57 C46,52.58 49.58,49 54,49 C58.42,49 62,52.58 62,57 C62,61.42 58.42,65 54,65 Z" />
-    <path
-        android:fillColor="@color/white"
-        android:pathData="M54,53 C51.79,53 50,54.79 50,57 C50,59.21 51.79,61 54,61 C56.21,61 58,59.21 58,57 C58,54.79 56.21,53 54,53 Z" />
+    <group
+        android:translateX="4"
+        android:translateY="4">
+        <!-- Box Background -->
+        <path
+            android:pathData="M37,10 h60 v58 h-60 z"
+            android:fillColor="#FFD54F"
+            android:strokeColor="#000000"
+            android:strokeWidth="2"/>
+
+        <!-- Tape on Box -->
+        <path
+            android:pathData="M57,10 v20 l10,-5 l10,5 v-20 z"
+            android:fillColor="#FFF176"
+            android:strokeColor="#000000"
+            android:strokeWidth="2"/>
+
+        <!-- Clock Outer Circle -->
+        <path
+            android:pathData="M45,40 a28,28 0,1,0 0,56 a28,28 0,1,0 0,-56"
+            android:fillColor="#80DEEA"
+            android:strokeColor="#000000"
+            android:strokeWidth="2"/>
+
+        <!-- Clock Inner Circle (White part) -->
+        <path
+            android:pathData="M45,48 a20,20 0,1,0 0,40 a20,20 0,1,0 0,-40"
+            android:fillColor="#FFFFFF"/>
+
+        <!-- Clock Hands -->
+        <path
+            android:pathData="M45,68 v-12 M45,68 h12"
+            android:strokeColor="#000000"
+            android:strokeWidth="3"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"/>
+    </group>
 </vector>
